@@ -5,7 +5,7 @@ We use the bookinfo app as part of the setup, and the content is heavily influen
 
 ## Project Setup
 
-First, we need to install docker, minikube and related components. Assuming you have ubuntu 18.04 and no docker/K8S environment already set up:
+First, we need to install docker, kind and related components. Assuming you have ubuntu 18.04 and no docker/K8S environment already set up:
 
 1. Install docker (via repository):
 ```
@@ -16,18 +16,16 @@ sudo apt update
 sudo apt install docker-ce docker-ce-cli
 ```
   * To test the installation, run `docker run hello-world`
-2. Install minikube:
-  * If you don't have a hypervisor already, download and install virtualbox
-    * Go to [their download page](https://www.virtualbox.org/wiki/Linux_Downloads) and pick the most recent package.
-    * Install with `dpkg -i <package_name>` and fix possible issues with `apt install -f`
-  * 
+2. Install kind:
+  * Install go and then the kind package.
 ```
-curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 && chmod +x minikube
-sudo install minikube /usr/local/bin
+sudo snap install go --classic
+GO111MODULE="on" go get sigs.k8s.io/kind@v0.6.0
+echo "export PATH=$PATH:$(go env GOPATH)/bin" >> ~/.bashrc
 ```
-3. Start the minikube cluster, with memory enhanced
+3. Create kind cluster
 ```
-minikube start --memory=16384 --cpus=4
+kind create cluster
 ```
 4. Install Istio and add istioctl to PATH:
 ```
@@ -49,11 +47,11 @@ kubectl apply -f samples/bookinfo/platform/kube/bookinfo.yaml
 ```
 kubectl apply -f samples/bookinfo/networking/bookinfo-gateway.yaml
 ```
-8. Set ingress gateway using minikube IP:
+8. Set gateway_url variable from ingressgateway IP:
 ```
 export INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="http2")].nodePort}')
 export SECURE_INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="https")].nodePort}')
-export INGRESS_HOST=$(minikube ip)
+export INGRESS_HOST=$(kubectl get po -l istio=ingressgateway -n istio-system -o jsonpath='{.items[0].status.hostIP}')
 export GATEWAY_URL=$INGRESS_HOST:$INGRESS_PORT
 ```
 9. Create subsets (destination rules) for bookinfo services
